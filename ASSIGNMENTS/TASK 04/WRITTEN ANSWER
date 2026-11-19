@@ -1,0 +1,279 @@
+# TASK 4 – POINTERS TO DERIVED CLASSES: FORENSICS
+
+## Task 4.1 – Locate the Defects
+
+### 1. Why the senior account rate is never used?
+The `rate()` function is not virtual in the base class. Therefore, when called using an `Account*`, the base class function is called. This is called static binding.
+
+### 2. Why memory leaks?
+The base class destructor is not virtual. When a `SeniorAccount` object is deleted through an `Account*`, the derived destructor may not be called properly. Therefore, the dynamically allocated `history` array may not be released.
+
+### 3. What is object slicing?
+When a derived class object is copied into a base class object, the derived class portion is removed. Only the base class data is copied.
+
+Example:
+
+```cpp
+Account copy = SeniorAccount();
+```
+
+The `copy` object contains only the `Account` part.
+
+---
+
+## Task 4.2 – Construct Evidence
+
+### Defective Program
+
+```cpp
+#include <iostream>
+using namespace std;
+
+class Account {
+public:
+    double rate() const {
+        return 3.5;
+    }
+
+    ~Account() {
+        cout << "Account destructor\n";
+    }
+};
+
+class SeniorAccount : public Account {
+    double* history = new double[100];
+
+public:
+    double rate() const {
+        return 4.0;
+    }
+
+    ~SeniorAccount() {
+        delete[] history;
+        cout << "SeniorAccount destructor\n";
+    }
+};
+
+int main() {
+    Account* accounts[2] = {
+        new Account,
+        new SeniorAccount
+    };
+
+    for (Account* a : accounts) {
+        cout << a->rate() << endl;
+    }
+
+    for (Account* a : accounts) {
+        delete a;
+    }
+
+    Account copy = SeniorAccount();
+
+    return 0;
+}
+```
+
+### Expected Observation
+
+The output will show:
+
+```text
+3.5
+3.5
+Account destructor
+Account destructor
+Account destructor
+```
+
+The senior account prints `3.5` instead of `4.0` because `rate()` is not virtual.
+
+The `SeniorAccount` destructor is not properly called when deleting through the base pointer, which can cause the dynamically allocated memory to leak.
+
+### Compile using Address Sanitizer
+
+```bash
+g++ -std=c++17 -Wall -Wextra -fsanitize=address -g main.cpp -o main
+```
+
+Run:
+
+```bash
+./main
+```
+
+Address Sanitizer may report a memory leak caused by the dynamically allocated `history` array.
+
+---
+
+## Task 4.3 – Repair the Program
+
+### Corrected Program
+
+```cpp
+#include <iostream>
+#include <memory>
+using namespace std;
+
+class Account {
+public:
+    virtual double rate() const {
+        return 3.5;
+    }
+
+    virtual ~Account() {
+        cout << "Account destructor\n";
+    }
+};
+
+class SeniorAccount : public Account {
+    double* history = new double[100];
+
+public:
+    double rate() const override {
+        return 4.0;
+    }
+
+    ~SeniorAccount() override {
+        delete[] history;
+        cout << "SeniorAccount destructor\n";
+    }
+};
+
+int main() {
+    unique_ptr<Account> accounts[2];
+
+    accounts[0] = make_unique<Account>();
+    accounts[1] = make_unique<SeniorAccount>();
+
+    for (const auto& a : accounts) {
+        cout << a->rate() << endl;
+    }
+
+    return 0;
+}
+```
+
+### Expected Output
+
+```text
+3.5
+4
+SeniorAccount destructor
+Account destructor
+Account destructor
+```
+
+### Explanation
+
+- `virtual` allows the correct derived function to be called.
+- `override` confirms that the derived function overrides the base function.
+- A virtual destructor ensures proper destruction of derived objects.
+- `unique_ptr` automatically releases memory when the objects go out of scope.
+- No manual `delete` is required.
+
+---
+
+## Task 4.4 – Prevent Recurrence
+
+1. A base class containing virtual functions should have a virtual destructor.
+2. Use the `override` keyword in derived classes to ensure correct overriding.
+
+---
+
+# PREDICT THE OUTPUT
+
+### Program
+
+```cpp
+#include <iostream>
+using namespace std;
+
+struct Account {
+    double rate() const {
+        return 3.5;
+    }
+
+    virtual double vrate() const {
+        return 3.5;
+    }
+
+    virtual ~Account() = default;
+};
+
+struct SeniorAccount : Account {
+    double rate() const {
+        return 4.0;
+    }
+
+    double vrate() const override {
+        return 4.0;
+    }
+};
+
+int main() {
+    SeniorAccount s;
+
+    Account* p = &s;
+
+    Account copy = s;
+
+    cout << p->rate() << ' '
+         << p->vrate() << ' '
+         << copy.vrate() << '\n';
+}
+```
+
+### Predicted Output
+
+```text
+3.5 4 3.5
+```
+
+### Explanation
+
+**1. `p->rate()` → 3.5**
+
+The `rate()` function is not virtual. Therefore, the base class function is selected using static binding.
+
+**2. `p->vrate()` → 4**
+
+The `vrate()` function is virtual. Therefore, the derived class function is called at runtime.
+
+**3. `copy.vrate()` → 3.5**
+
+The derived object `s` is copied into an `Account` object. This causes object slicing. The copied object contains only the base class portion, so the base class function is called.
+
+---
+
+# ALTERNATIVE CONCEPT AND COMPLEXITY ANALYSIS
+
+If the accounts are stored using `std::unique_ptr<Account>` inside a `std::vector`, memory management becomes automatic.
+
+Example:
+
+```cpp
+vector<unique_ptr<Account>> accounts;
+
+accounts.push_back(make_unique<Account>());
+accounts.push_back(make_unique<SeniorAccount>());
+
+for (const auto& a : accounts) {
+    cout << a->rate() << endl;
+}
+```
+
+### Comparison
+
+| Feature | Raw pointers | unique_ptr |
+|---|---|---|
+| Memory management | Manual delete | Automatic |
+| Memory leak risk | Higher | Lower |
+| Time complexity | O(n) | O(n) |
+| Space complexity | O(n) | O(n) |
+| Polymorphism | Requires virtual functions | Requires virtual functions |
+| Object slicing | Possible when copying by value | Avoided when stored as pointers |
+
+### Conclusion
+
+Using virtual functions enables runtime polymorphism. A virtual destructor ensures proper destruction of derived objects. Smart pointers simplify memory management and reduce the possibility of memory leaks.
