@@ -1,1 +1,233 @@
+# TASK 01 – CLASS DESIGN REVIEW (6 MARKS)
+
+## 1.1 Identify the Design Deficiencies
+
+The given payroll classes Professor, LabAssistant, and GuestFaculty have the following design deficiencies:
+
+1. **Code Duplication:** Common attributes such as name, ID, and basic salary are repeated in multiple classes.
+2. **Poor Encapsulation:** Data members are declared public, allowing direct modification from outside the classes.
+3. **Inconsistent Naming:** Different naming conventions are used for the same information, such as name, nm, id, and code.
+4. **Unused Data Member:** The da (Dearness Allowance) variable is declared but not used in salary calculations.
+5. **Magic Number:** The value 0.42 is directly used in the pay() function instead of being defined as a constant.
+6. **Poor Extensibility:** Adding a new staff category requires creating another separate class with repeated code.
+7. **No Polymorphism:** There is no common interface to calculate the salary of different staff members using a single loop.
+
+## 1.2 Repair the Design
+
+### Objective
+
+Create a common base class Staff and derive Professor, LabAssistant, and GuestFaculty from it.
+
+- Common details are stored in the base class.
+- Data members are protected.
+- pay() is declared as a virtual function.
+- Each derived class overrides pay().
+- The magic number 0.42 is replaced with a named constant.
+- All staff can be processed using a single loop.
+
+### C++ Program
+
+```cpp
+#include <iostream>
+#include <string>
+using namespace std;
+
+const double DA_RATE = 0.42;
+
+class Staff
+{
+protected:
+    string name;
+    int id;
+
+public:
+    Staff(string n, int i)
+    {
+        name = n;
+        id = i;
+    }
+
+    virtual double pay() = 0;
+
+    virtual ~Staff() {}
+};
+
+class Professor : public Staff
+{
+private:
+    double basic;
+    double research;
+
+public:
+    Professor(string n, int i, double b, double r)
+        : Staff(n, i)
+    {
+        basic = b;
+        research = r;
+    }
+
+    double pay() override
+    {
+        return basic + basic * DA_RATE + research;
+    }
+};
+
+class LabAssistant : public Staff
+{
+private:
+    double basic;
+
+public:
+    LabAssistant(string n, int i, double b)
+        : Staff(n, i)
+    {
+        basic = b;
+    }
+
+    double pay() override
+    {
+        return basic + basic * DA_RATE;
+    }
+};
+
+class GuestFaculty : public Staff
+{
+private:
+    double hours;
+    double rate;
+
+public:
+    GuestFaculty(string n, int i, double h, double r)
+        : Staff(n, i)
+    {
+        hours = h;
+        rate = r;
+    }
+
+    double pay() override
+    {
+        return hours * rate;
+    }
+};
+
+int main()
+{
+    Professor p("Arun", 101, 50000, 10000);
+    LabAssistant l("Kumar", 102, 30000);
+    GuestFaculty g("Priya", 103, 20, 1000);
+
+    Staff* staff[3] = {&p, &l, &g};
+
+    for (int i = 0; i < 3; i++)
+    {
+        cout << "Pay: " << staff[i]->pay() << endl;
+    }
+
+    return 0;
+}
+```
+
+### Output
+
+```text
+Pay: 81000
+Pay: 42600
+Pay: 20000
+```
+
+### Explanation
+
+- Staff is the common base class.
+- pay() is a pure virtual function, making Staff an abstract class.
+- Professor, LabAssistant, and GuestFaculty override pay().
+- DA_RATE replaces the magic number 0.42.
+- Staff* staff[3] stores pointers to different derived objects.
+- The loop calls the correct pay() function using runtime polymorphism.
+
+### UML Class Diagram
+
+```text
+                    Staff (Abstract)
+             ---------------------------
+             # name : string
+             # id   : int
+             ---------------------------
+             + pay() : double = 0
+             + ~Staff()
+                      |
+          ____________|____________
+          |            |           |
+          |            |           |
+     Professor   LabAssistant  GuestFaculty
+     ----------  ------------  ------------
+     - basic     - basic       - hours
+     - research                - rate
+     ----------  ------------  ------------
+     + pay()     + pay()       + pay()
+```
+
+## 1.3 Design Defence
+
+The hierarchy reduces code duplication by placing common details such as name and ID in the base class Staff. Each derived class implements its own pay() function. When a new staff category is added, a new derived class can be created without modifying the existing classes. The use of virtual functions allows all staff members to be processed through a common base-class pointer. This makes the program reusable, maintainable, and easier to extend.
+
+## Alternative Concept and Complexity Analysis
+
+### Alternative: Single Staff Class with a Type Field
+
+Instead of inheritance, all staff members can be represented using a single class containing a type field and a switch statement inside pay().
+
+### Code
+
+```cpp
+class Staff
+{
+public:
+    int type;
+    double basic, research, hours, rate;
+
+    double pay()
+    {
+        switch (type)
+        {
+            case 1:
+                return basic + basic * 0.42 + research;
+
+            case 2:
+                return basic + basic * 0.42;
+
+            case 3:
+                return hours * rate;
+
+            default:
+                return 0;
+        }
+    }
+};
+```
+
+### Comparison
+
+| Feature | Inheritance | Single Class with Switch |
+|---|---|---|
+| Time per pay() call | O(1) | O(1) |
+| Space per object | Stores only required fields | Stores all fields, including unused fields |
+| Adding a new staff type | Add a new derived class | Modify the class and switch |
+| Code maintenance | Easier | Becomes more complicated |
+| Polymorphism | Supported | Not naturally supported |
+
+### Conclusion
+
+Inheritance is a better design because it avoids unnecessary data members, supports polymorphism, and allows new staff categories to be added without modifying existing classes.
+
+### Compilation Command
+
+```bash
+g++ -std=c++17 -Wall -Wextra Task1.cpp -o Task1
+```
+
+### Execution Command
+
+```bash
+./Task1
+```
 
