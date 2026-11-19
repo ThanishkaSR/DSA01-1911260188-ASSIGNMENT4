@@ -1,0 +1,314 @@
+# TASK 02 – FROM REQUIREMENT TO HIERARCHY (8 MARKS)
+
+## 2.1 Identify the Relationships (2 Marks)
+
+The university system contains the following relationships:
+
+1. **Person → Student:** Student is a Person. This is an is-a relationship and uses single inheritance.
+2. **Person → Staff:** Staff is a Person. This is an is-a relationship and uses single inheritance.
+3. **Student + Staff → TeachingAssistant:** A TeachingAssistant is both a Student and a Staff member. This is an is-a relationship and uses multiple inheritance.
+4. **Student → ResearchScholar:** A ResearchScholar is a Student who also receives a fellowship. This is an is-a relationship and uses single inheritance.
+5. **Fellowship:** Fellowship amount is stored as a data member in ResearchScholar, representing an attribute.
+
+### Types of Inheritance Used
+
+- Single inheritance – Person to Student and Person to Staff.
+- Multiple inheritance – Student and Staff to TeachingAssistant.
+- Hierarchical inheritance – Person is inherited by Student and Staff.
+- Multilevel inheritance – Person → Student → ResearchScholar.
+- Hybrid inheritance – Combination of hierarchical and multiple inheritance in the university hierarchy.
+
+## 2.2 Resolve the Diamond Problem (2 Marks)
+
+### Problem
+
+When TeachingAssistant inherits from both Student and Staff, and both inherit from Person, TeachingAssistant gets two copies of the Person base class.
+
+This creates the diamond problem:
+
+```text
+             Person
+            /      \\
+       Student     Staff
+            \\      /
+       TeachingAssistant
+```
+
+As a result, accessing common members such as name, ID, or phone may become ambiguous because two copies of Person exist.
+
+### Solution: Virtual Base Classes
+
+The diamond problem can be solved by using virtual inheritance.
+
+```cpp
+class Student : virtual public Person
+{
+};
+
+class Staff : virtual public Person
+{
+};
+```
+
+By using virtual public Person, both Student and Staff share a single Person base-class subobject when inherited by TeachingAssistant.
+
+### Diagram After Virtual Inheritance
+
+```text
+              Person
+             /      \\
+       (virtual)  (virtual)
+          /          \\
+      Student       Staff
+          \\          /
+       TeachingAssistant
+```
+
+Thus, TeachingAssistant contains only one copy of Person, eliminating ambiguity.
+
+## 2.3 Design the Classes (3 Marks)
+
+### C++ Class Declarations
+
+```cpp
+#include <iostream>
+#include <string>
+using namespace std;
+
+class Person
+{
+protected:
+    string name;
+    int id;
+    string phone;
+
+public:
+    Person(string n, int i, string p)
+    {
+        name = n;
+        id = i;
+        phone = p;
+    }
+};
+
+class Student : virtual public Person
+{
+protected:
+    string program;
+    double cgpa;
+
+public:
+    Student(string n, int i, string p, string prog, double c)
+        : Person(n, i, p)
+    {
+        program = prog;
+        cgpa = c;
+    }
+};
+
+class Staff : virtual public Person
+{
+protected:
+    string department;
+    double salary;
+
+public:
+    Staff(string n, int i, string p, string d, double s)
+        : Person(n, i, p)
+    {
+        department = d;
+        salary = s;
+    }
+};
+
+class TeachingAssistant : public Student, public Staff
+{
+public:
+    TeachingAssistant(string n, int i, string p,
+                     string prog, double c,
+                     string d, double s)
+        : Person(n, i, p),
+          Student(n, i, p, prog, c),
+          Staff(n, i, p, d, s)
+    {
+    }
+};
+
+class ResearchScholar : public Student
+{
+private:
+    double fellowship;
+
+public:
+    ResearchScholar(string n, int i, string p,
+                   string prog, double c, double f)
+        : Person(n, i, p),
+          Student(n, i, p, prog, c)
+    {
+        fellowship = f;
+    }
+};
+```
+
+### Inheritance Decisions
+
+| Class | Base Class | Inheritance Type |
+|---|---|---|
+| Student | Person | Virtual public |
+| Staff | Person | Virtual public |
+| TeachingAssistant | Student, Staff | Public multiple inheritance |
+| ResearchScholar | Student | Public single inheritance |
+
+**Reason:** Public inheritance represents an is-a relationship. Virtual inheritance is used for Student and Staff to avoid duplicate Person objects in TeachingAssistant.
+
+## 2.4 Access Table (1 Mark)
+
+The following table shows how members of Person are accessed inside Student under different inheritance modes.
+
+| Member in Person | Public Inheritance | Protected Inheritance | Private Inheritance |
+|---|---|---|---|
+| Public | Public | Protected | Private |
+| Protected | Protected | Protected | Private |
+| Private | Not accessible | Not accessible | Not accessible |
+
+**Explanation:** Private members of the base class cannot be directly accessed by the derived class. Public and protected members change their visibility according to the inheritance mode.
+
+# PREDICT THE OUTPUT
+
+### Given Program
+
+```cpp
+#include <iostream>
+using namespace std;
+
+struct Person
+{
+    Person()
+    {
+        cout << "Person ";
+    }
+};
+
+struct Student : virtual Person
+{
+    Student()
+    {
+        cout << "Student ";
+    }
+};
+
+struct Staff : virtual Person
+{
+    Staff()
+    {
+        cout << "Staff ";
+    }
+};
+
+struct TeachingAssistant : Student, Staff
+{
+    TeachingAssistant()
+    {
+        cout << "TA ";
+    }
+};
+
+int main()
+{
+    TeachingAssistant ta;
+    cout << '\\n';
+}
+```
+
+### Predicted Output
+
+```text
+Person Student Staff TA
+```
+
+### Explanation
+
+1. Person is constructed first because it is a virtual base class.
+2. Student is constructed next.
+3. Staff is constructed next.
+4. TeachingAssistant is constructed last.
+
+Since Person is inherited virtually by both Student and Staff, only one Person object is created.
+
+### Remove Virtual and Predict the Output
+
+If virtual is removed from both Student and Staff:
+
+```cpp
+struct Student : Person
+{
+};
+
+struct Staff : Person
+{
+};
+```
+
+### New Output
+
+```text
+Person Student Person Staff TA
+```
+
+### Explanation
+
+Without virtual inheritance, Student and Staff each contain their own Person subobject. Therefore, the Person constructor is called twice.
+
+**Compiler messages:** The given program will still compile successfully. However, accessing a Person member such as ta.name would become ambiguous because TeachingAssistant would contain two Person subobjects.
+
+# ALTERNATIVE CONCEPT AND COMPLEXITY ANALYSIS
+
+## Alternative: Composition Instead of Multiple Inheritance
+
+Instead of TeachingAssistant inheriting from Student and Staff, it can contain Student and Staff objects as members.
+
+```cpp
+class TeachingAssistant
+{
+private:
+    Student student;
+    Staff staff;
+
+public:
+    TeachingAssistant(Student s, Staff st)
+        : student(s), staff(st)
+    {
+    }
+};
+```
+
+Here, TeachingAssistant has-a Student and has-a Staff instead of being both a Student and Staff.
+
+### Comparison
+
+| Feature | Virtual Inheritance | Composition |
+|---|---|---|
+| Relationship | Is-a | Has-a |
+| Person objects | One shared Person | Usually two Person subobjects |
+| Space | Less duplication | May require more space |
+| Accessing name | Direct access, unambiguous | Access through student/staff objects |
+| Ambiguity | Avoided using virtual inheritance | Avoided using member access |
+| Flexibility | Suitable for true is-a relationships | Suitable when objects are contained |
+
+### Space Analysis Using sizeof
+
+Virtual inheritance avoids duplicate Person subobjects in TeachingAssistant.
+
+Composition may contain two separate Person subobjects—one inside Student and another inside Staff—so its object size may be larger.
+
+The exact size can be measured using:
+
+```cpp
+cout << sizeof(TeachingAssistant);
+```
+
+The actual size depends on the compiler, padding, and implementation of virtual inheritance.
+
+### Conclusion
+
+Virtual inheritance is suitable when a TeachingAssistant is genuinely both a Student and a Staff member. It avoids duplication of the Person base class and provides a clean hierarchy. Composition is an alternative when TeachingAssistant only needs to contain Student and Staff objects rather than behave as both.
