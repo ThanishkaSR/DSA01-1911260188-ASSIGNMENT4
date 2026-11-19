@@ -1,0 +1,497 @@
+# TASK 03 – CONSTRUCTORS IN DERIVED CLASSES AND MEMBER CLASSES (9 MARKS)
+
+## 3.1 Pass Values to Base Constructors (3 Marks)
+
+Constructors of derived classes pass values to their base classes using member initializer lists.
+
+```cpp
+Student(string n, int i, string p, string prog, double c)
+    : Person(n, i, p)
+{
+    program = prog;
+    cgpa = c;
+}
+```
+
+For TeachingAssistant, the most-derived class directly initializes the virtual base class Person.
+
+```cpp
+TeachingAssistant(string n, int i, string p,
+                 string prog, double c,
+                 string d, double s)
+    : Person(n, i, p),
+      Student(n, i, p, prog, c),
+      Staff(n, i, p, d, s)
+{
+}
+```
+
+**Explanation:** In virtual inheritance, the most-derived class is responsible for constructing the virtual base class. Therefore, TeachingAssistant must initialize Person directly.
+
+---
+
+## 3.2 Member Classes (2 Marks)
+
+Member classes represent a has-a relationship. A Person has an Address, and a Student has a Course.
+
+```cpp
+class Address
+{
+private:
+    string city;
+    int pin;
+
+public:
+    Address(string c, int p)
+    {
+        city = c;
+        pin = p;
+    }
+};
+
+class Course
+{
+private:
+    string courseName;
+    int courseCode;
+
+public:
+    Course(string c, int code)
+    {
+        courseName = c;
+        courseCode = code;
+    }
+};
+```
+
+Address is a member class of Person, and Course is a member class of Student. Their constructors receive values through the constructor of the containing class.
+
+---
+
+## 3.3 Trace the Order of Construction and Destruction (3 Marks)
+
+### Program
+
+```cpp
+#include <iostream>
+using namespace std;
+
+struct Person
+{
+    Person()
+    {
+        cout << "Person ";
+    }
+
+    ~Person()
+    {
+        cout << "~Person ";
+    }
+};
+
+struct Student : virtual Person
+{
+    Student()
+    {
+        cout << "Student ";
+    }
+
+    ~Student()
+    {
+        cout << "~Student ";
+    }
+};
+
+struct Staff : virtual Person
+{
+    Staff()
+    {
+        cout << "Staff ";
+    }
+
+    ~Staff()
+    {
+        cout << "~Staff ";
+    }
+};
+
+struct TeachingAssistant : Student, Staff
+{
+    TeachingAssistant()
+    {
+        cout << "TA ";
+    }
+
+    ~TeachingAssistant()
+    {
+        cout << "~TA ";
+    }
+};
+
+int main()
+{
+    cout << "Student object: ";
+    {
+        Student s;
+    }
+
+    cout << "\nStaff object: ";
+    {
+        Staff st;
+    }
+
+    cout << "\nTeachingAssistant object: ";
+    {
+        TeachingAssistant ta;
+    }
+
+    cout << endl;
+    return 0;
+}
+```
+
+### Output
+
+```text
+Student object: Person Student ~Student ~Person
+Staff object: Person Staff ~Staff ~Person
+TeachingAssistant object: Person Student Staff TA ~TA ~Staff ~Student ~Person
+```
+
+### Explanation
+
+**Construction order:**
+
+1. Virtual base classes are constructed first.
+2. Direct base classes are constructed next, in declaration order.
+3. Member objects are constructed in declaration order.
+4. The derived class constructor executes last.
+
+**Destruction order:**
+
+Destruction happens in the reverse order of construction.
+
+---
+
+## 3.4 Experiment – Remove Virtual (1 Mark)
+
+Remove virtual from both Student and Staff.
+
+```cpp
+struct Student : Person
+{
+};
+
+struct Staff : Person
+{
+};
+```
+
+### Expected Change in Output
+
+For a TeachingAssistant object, Person is constructed twice because Student and Staff now contain separate Person subobjects.
+
+```text
+Person Student Person Staff TA
+```
+
+### Explanation
+
+With virtual inheritance, TeachingAssistant contains only one shared Person subobject.
+
+Without virtual inheritance, it contains two separate Person subobjects.
+
+Therefore:
+
+- Constructor output changes because Person is constructed twice.
+- sizeof(TeachingAssistant) may increase because of the extra Person subobject.
+- Accessing common Person members can become ambiguous.
+
+To compare object size, use:
+
+```cpp
+cout << "Size of TeachingAssistant: "
+     << sizeof(TeachingAssistant) << endl;
+```
+
+The exact size depends on the compiler and memory padding.
+
+---
+
+# PREDICT THE OUTPUT
+
+### Given Program
+
+```cpp
+#include <iostream>
+using namespace std;
+
+struct Engine
+{
+    Engine()
+    {
+        cout << "Engine ";
+    }
+
+    ~Engine()
+    {
+        cout << "~Engine ";
+    }
+};
+
+struct Vehicle
+{
+    Vehicle()
+    {
+        cout << "Vehicle ";
+    }
+
+    ~Vehicle()
+    {
+        cout << "~Vehicle ";
+    }
+};
+
+struct Car : Vehicle
+{
+    Engine e;
+
+    Car()
+    {
+        cout << "Car ";
+    }
+
+    ~Car()
+    {
+        cout << "~Car ";
+    }
+};
+
+int main()
+{
+    {
+        Car c;
+        cout << "| ";
+    }
+
+    cout << '\n';
+}
+```
+
+### Predicted Output
+
+```text
+Vehicle Engine Car | ~Car ~Engine ~Vehicle
+```
+
+### Explanation
+
+- Vehicle is constructed first because it is the base class.
+- Engine is constructed next because it is a member object.
+- Car constructor executes last.
+- When the object is destroyed, Car destructor executes first.
+- Then Engine is destroyed.
+- Finally, Vehicle is destroyed.
+
+**Rule:** Base classes are constructed first, followed by member objects in declaration order, and then the derived class. Destruction occurs in the reverse order.
+
+---
+
+# COMPLETE THE CODE
+
+## Complete Code
+
+```cpp
+#include <iostream>
+#include <string>
+using namespace std;
+
+class Person
+{
+protected:
+    string name;
+    int age;
+
+public:
+    Person(const string& n, int a) : name(n), age(a) {}
+};
+
+class Address
+{
+    string city;
+    int pin;
+
+public:
+    Address(const string& c, int p) : city(c), pin(p) {}
+
+    string str() const
+    {
+        return city + "-" + to_string(pin);
+    }
+};
+
+class Student : public Person
+{
+    long long regNo;
+    Address home;
+
+public:
+
+    Student(const string& n, int a, long long r,
+            const string& c, int p)
+        : Person(n, a), regNo(r), home(c, p)
+    {
+    }
+
+    void print() const
+    {
+        cout << regNo << ' ' << name << " (" << age << ") "
+             << home.str() << '\n';
+    }
+};
+
+int main()
+{
+    Student s("Kavya", 19, 192311001, "Salem", 636001);
+
+    s.print();
+
+    return 0;
+}
+```
+
+### Expected Output
+
+```text
+192311001 Kavya (19) Salem-636001
+```
+
+### Explanation
+
+The constructor initializes:
+
+- Person(n, a) – initializes the base class Person.
+- regNo(r) – initializes the registration number.
+- home(c, p) – initializes the Address member object.
+
+The initializer list initializes objects directly before the constructor body executes.
+
+---
+
+## Swap the Initializer List Order and Compile with -Wall
+
+Change the constructor to:
+
+```cpp
+Student(const string& n, int a, long long r,
+        const string& c, int p)
+    : home(c, p), regNo(r), Person(n, a)
+{
+}
+```
+
+Compile using:
+
+```bash
+g++ -std=c++17 -Wall -Wextra main.cpp -o main
+```
+
+### Warning
+
+The compiler may display a warning similar to:
+
+```text
+warning: 'Student::home' will be initialized after
+warning: 'Student::regNo'
+warning: when initialized here
+```
+
+The exact warning wording may differ depending on the compiler version.
+
+### Explanation
+
+C++ does not initialize members according to the order written in the initializer list.
+
+The actual initialization order is:
+
+1. Base class Person
+2. Member regNo
+3. Member home
+
+The order is determined by the order of declaration inside the class, not by the initializer list. Therefore, changing the initializer list order can produce a -Wreorder warning.
+
+The output remains the same:
+
+```text
+192311001 Kavya (19) Salem-636001
+```
+
+---
+
+# ALTERNATIVE CONCEPT AND COMPLEXITY ANALYSIS
+
+## Using a Pointer Instead of a Member Object
+
+Instead of storing an Address object directly:
+
+```cpp
+Address home;
+```
+
+Student can store a pointer:
+
+```cpp
+Address* home;
+```
+
+### Alternative Code
+
+```cpp
+class Student : public Person
+{
+    long long regNo;
+    Address* home;
+
+public:
+    Student(const string& n, int a, long long r,
+            const string& c, int p)
+        : Person(n, a), regNo(r)
+    {
+        home = new Address(c, p);
+    }
+
+    void print() const
+    {
+        cout << regNo << ' ' << name << " (" << age << ") "
+             << home->str() << '\n';
+    }
+
+    ~Student()
+    {
+        delete home;
+    }
+};
+```
+
+### Comparison
+
+| Feature | Address Member Object | Address Pointer |
+|---|---|---|
+| Storage | Address stored directly inside Student | Pointer stored inside Student |
+| Memory allocation | No separate dynamic allocation | Dynamic allocation using new |
+| Time | Faster and simpler | Extra allocation and deallocation time |
+| Space | Stores the Address object | Stores a pointer plus dynamically allocated Address |
+| Destructor | Automatically destroys Address | Must delete the allocated Address |
+| Copy constructor | Automatic copying works | Must perform deep copy |
+| Memory leak risk | Low | Possible if delete is forgotten |
+
+### Complexity
+
+- Both approaches require O(1) time to access the address.
+- Member object approach requires O(1) space.
+- Pointer approach also requires O(1) space, but additionally allocates memory dynamically.
+- Dynamic allocation and deallocation add extra overhead.
+
+### Conclusion
+
+Using a member object is simpler, safer and more efficient when every Student always has an Address. Using a pointer is useful when the Address may be optional or needs to be created dynamically, but it requires careful memory management, a proper copy constructor and destructor.
