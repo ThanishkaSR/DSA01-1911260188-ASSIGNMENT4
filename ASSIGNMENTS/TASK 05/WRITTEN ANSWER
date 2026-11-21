@@ -1,0 +1,433 @@
+# TASK 5 – POINTERS TO OBJECTS AND THE this POINTER
+
+**Bloom's Level:** K5 – Evaluate  
+**Marks:** 7
+
+## Task 5.1 – Four Ways to Reach an Object (3 Marks)
+
+A Cart object can be accessed directly, through a pointer, through a reference, or through dynamic memory allocation.
+
+### Complete Program
+
+```cpp
+#include <iostream>
+#include <string>
+using namespace std;
+
+class Cart {
+    string items[10];
+    double prices[10];
+    int n = 0;
+    double discount = 0;
+
+public:
+    Cart& add(const string& item, double price) {
+        if (n < 10) {
+            items[n] = item;
+            prices[n] = price;
+            n++;
+        }
+
+        return *this;
+    }
+
+    Cart& setDiscount(double discount) {
+        this->discount = discount;
+        return *this;
+    }
+
+    double total() const {
+        double t = 0;
+
+        for (int i = 0; i < n; i++) {
+            t += prices[i];
+        }
+
+        return t * (100 - discount) / 100;
+    }
+};
+
+int main() {
+    // (a) Direct access
+    Cart c1;
+    c1.add("Rice", 60);
+    c1.add("Dal", 120);
+
+    cout << "Direct: " << c1.total() << endl;
+
+    // (b) Access through pointer
+    Cart c2;
+    Cart* p = &c2;
+
+    p->add("Oil", 180);
+
+    cout << "Pointer: " << p->total() << endl;
+
+    // (c) Access through reference
+    Cart c3;
+    Cart& r = c3;
+
+    r.add("Milk", 50);
+
+    cout << "Reference: " << r.total() << endl;
+
+    // (d) Dynamic object using new and delete
+    Cart* p4 = new Cart;
+
+    p4->add("Bread", 40);
+
+    cout << "Dynamic: " << p4->total() << endl;
+
+    delete p4;
+
+    // Method chaining using this pointer
+    Cart c5;
+
+    c5.add("Rice", 60)
+      .add("Dal", 120)
+      .setDiscount(10);
+
+    cout << "Chaining: " << c5.total() << endl;
+
+    return 0;
+}
+```
+
+### Expected Output
+
+```text
+Direct: 180
+Pointer: 180
+Reference: 50
+Dynamic: 40
+Chaining: 162
+```
+
+### Explanation
+
+**(a) Direct access**
+
+```cpp
+c1.total();
+```
+
+The object is accessed directly using its name.
+
+**(b) Pointer access**
+
+```cpp
+p->total();
+```
+
+The pointer stores the address of the Cart object. The `->` operator is used to access its members.
+
+**(c) Reference access**
+
+```cpp
+r.total();
+```
+
+The reference is another name for the existing Cart object.
+
+**(d) Dynamic object**
+
+```cpp
+Cart* p4 = new Cart;
+delete p4;
+```
+
+The object is created dynamically using `new` and released using `delete`.
+
+### Use of the this Pointer
+
+```cpp
+return *this;
+```
+
+`this` is a pointer to the current object. `*this` refers to the current object itself.
+
+Returning `*this` by reference allows method chaining.
+
+```cpp
+this->discount = discount;
+```
+
+The left side refers to the class data member. The right side refers to the function parameter.
+
+---
+
+## Task 5.2 – Change the Requirement (2 Marks)
+
+The app now keeps an array of pointers to Cart objects for all active customers. The following program finds the cart with the highest total using indexing.
+
+### Complete Program
+
+```cpp
+#include <iostream>
+using namespace std;
+
+class Cart {
+    double amount;
+
+public:
+    Cart(double a) : amount(a) {}
+
+    double total() const {
+        return amount;
+    }
+};
+
+int main() {
+    Cart c1(250);
+    Cart c2(500);
+    Cart c3(350);
+
+    Cart* carts[3] = {&c1, &c2, &c3};
+
+    int highest = 0;
+
+    for (int i = 1; i < 3; i++) {
+        if (carts[i]->total() > carts[highest]->total()) {
+            highest = i;
+        }
+    }
+
+    cout << "Highest cart total: "
+         << carts[highest]->total() << endl;
+
+    return 0;
+}
+```
+
+### Expected Output
+
+```text
+Highest cart total: 500
+```
+
+### Explanation
+
+The array stores the addresses of three Cart objects. The loop compares their totals and stores the index of the highest cart.
+
+### Complexity Analysis
+
+- Time complexity: O(n), because each cart is checked once.
+- Space complexity: O(1) extra space, because only the index is stored.
+
+---
+
+## Task 5.3 – Compare (2 Marks)
+
+### Comparison of Four Ways
+
+| Method | Safety | Lifetime | When to use |
+|---|---|---|---|
+| Direct object | Safe and simple | Until the scope ends | Normal object usage |
+| Pointer | Can be null; must be handled carefully | Depends on the pointed object | When address-based access is needed |
+| Reference | Cannot normally be null and cannot be reseated | Same lifetime as referenced object | When an alias is required |
+| Dynamic pointer | Requires memory management | Until `delete` is called | When dynamic lifetime is required |
+
+### Why is this a Pointer?
+
+The `this` pointer stores the address of the current object on which a member function is called.
+
+For example:
+
+```cpp
+c.add("Rice", 60);
+```
+
+Inside `add()`, `this` points to object `c`.
+
+### What Does *this Refer To?
+
+`*this` dereferences the `this` pointer and refers to the current object itself.
+
+Returning `*this` allows the same object to be used in consecutive function calls.
+
+---
+
+# COMPLETE THE CODE
+
+Complete TODO 1 and TODO 2 using the this pointer and execute the program.
+
+### Complete Program
+
+```cpp
+#include <iomanip>
+#include <iostream>
+#include <string>
+
+class Cart {
+    std::string items[10];
+    double prices[10];
+    int n = 0;
+    double discount = 0;
+
+public:
+    Cart& add(const std::string& item, double price) {
+        if (n < 10) {
+            items[n] = item;
+            prices[n] = price;
+            n++;
+        }
+
+        return *this;
+    }
+
+    Cart& setDiscount(double discount) {
+        this->discount = discount;
+        return *this;
+    }
+
+    double total() const {
+        double t = 0;
+
+        for (int i = 0; i < n; ++i) {
+            t += prices[i];
+        }
+
+        return t * (100 - discount) / 100;
+    }
+};
+
+int main() {
+    Cart c;
+
+    c.add("Rice", 60)
+     .add("Dal", 120)
+     .setDiscount(10);
+
+    Cart* p = &c;
+
+    p->add("Oil", 180);
+
+    std::cout << std::fixed
+              << std::setprecision(2)
+              << p->total() << '\n';
+}
+```
+
+### Expected Output
+
+```text
+324.00
+```
+
+### Calculation
+
+Total before discount:
+
+```text
+Rice = 60
+Dal = 120
+Oil = 180
+
+Total = 60 + 120 + 180
+      = 360
+```
+
+10% discount:
+
+```text
+360 × 10 / 100 = 36
+```
+
+Final total:
+
+```text
+360 - 36 = 324
+```
+
+Therefore, the output is:
+
+```text
+324.00
+```
+
+---
+
+## Explain What Happens If add() Returns Cart Instead of Cart&
+
+If `add()` returns `Cart` by value, it returns a copy of the current object instead of a reference to the original object.
+
+During method chaining, subsequent function calls operate on temporary copies. Therefore, modifications made to these copies may not affect the original Cart object.
+
+Returning `Cart&` avoids unnecessary copies and allows method chaining to modify the same original object.
+
+---
+
+# ALTERNATIVE CONCEPT AND COMPLEXITY ANALYSIS
+
+## Alternative: std::vector<Cart> Instead of an Array of Pointers
+
+If the carts are stored as objects in a `std::vector<Cart>`, the highest total can be found using indexing.
+
+### Program
+
+```cpp
+#include <iostream>
+#include <vector>
+using namespace std;
+
+class Cart {
+    double amount;
+
+public:
+    Cart(double a) : amount(a) {}
+
+    double total() const {
+        return amount;
+    }
+};
+
+int main() {
+    vector<Cart> carts;
+
+    carts.emplace_back(250);
+    carts.emplace_back(500);
+    carts.emplace_back(350);
+
+    int highest = 0;
+
+    for (int i = 1; i < carts.size(); i++) {
+        if (carts[i].total() > carts[highest].total()) {
+            highest = i;
+        }
+    }
+
+    cout << "Highest cart total: "
+         << carts[highest].total() << endl;
+
+    return 0;
+}
+```
+
+### Expected Output
+
+```text
+Highest cart total: 500
+```
+
+### Complexity Comparison
+
+| Feature | Array of pointers | vector<Cart> |
+|---|---|---|
+| Find highest total | O(n) | O(n) |
+| Extra search space | O(1) | O(1) |
+| Storage | One pointer per element | Objects stored directly |
+| Object copying | Pointer copies | Object copies when copied |
+| Memory usage | Pointer array + separate objects | Vector storage for objects |
+| Access | `carts[i]->total()` | `carts[i].total()` |
+| Pointer stability | Depends on pointed object lifetime | Vector growth may invalidate pointers/references to elements |
+
+### What Happens When the Vector Grows?
+
+When a `std::vector<Cart>` grows beyond its current capacity, it may allocate a larger memory block and move or copy its objects into the new block.
+
+Therefore, pointers, references and iterators to elements of the vector may become invalid after reallocation.
+
+### Conclusion
+
+Both methods require O(n) time to find the highest cart total. An array of pointers stores one pointer for each cart, while a vector of objects stores the actual Cart objects. A vector of objects is generally simpler and avoids separate object allocation, but its growth may invalidate pointers and references to its elements.
+
