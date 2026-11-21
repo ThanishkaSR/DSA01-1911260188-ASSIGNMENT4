@@ -1,0 +1,426 @@
+# TASK 6 – DESIGN CHALLENGE
+## Vehicle Rental Fleet
+
+### Stage 1 – Interpret the Problem (2 Marks)
+
+**Entities identified:**
+
+- **Vehicle:** Common base class containing registration number, daily rental rate and rental status.
+- **Bicycle:** A non-motor vehicle.
+- **MotorVehicle:** Contains fuel or charge level and service due date.
+- **TwoWheeler:** A motor vehicle.
+- **Car:** A motor vehicle with seating capacity.
+- **ElectricCar:** A car with battery capacity and charging rate per kWh.
+- **ElectricBus:** A new type of vehicle added through inheritance.
+
+**Common data members:**
+- Registration number
+- Daily rental rate
+- Rental status
+
+**Behaviour that differs:**
+- Each vehicle calculates its rental charge differently.
+- Motor vehicles contain fuel or charge level and service due date.
+- Cars contain seating capacity.
+- Electric vehicles calculate charging cost based on battery capacity and charge per kWh.
+
+**Testable requirements:**
+
+1. Every vehicle must have a registration number and daily rental rate.
+2. Every vehicle must calculate its rental charge.
+3. The company must be able to rent and return vehicles.
+4. Late returns must include an additional charge.
+5. The fleet must be displayed using a common interface.
+6. New vehicle types must be added without modifying existing classes.
+
+---
+
+### Stage 2 – Propose the Hierarchy (2 Marks)
+
+**Class Hierarchy:**
+
+```text
+                 Vehicle (Abstract Base Class)
+                  /          |            \
+                 /           |             \
+            Bicycle     MotorVehicle    ElectricBus
+                            |
+                    -----------------
+                    |               |
+                TwoWheeler         Car
+                                    |
+                                ElectricCar
+```
+
+**Types of inheritance used:**
+
+- Single inheritance: Bicycle inherits Vehicle.
+- Single inheritance: MotorVehicle inherits Vehicle.
+- Hierarchical inheritance: TwoWheeler and Car inherit MotorVehicle.
+- Multilevel inheritance: ElectricCar inherits Car.
+- Single inheritance: ElectricBus inherits Vehicle.
+
+**Abstract base class:** Vehicle
+
+**Pure virtual function:** rentalCharge()
+
+**Member classes:** No member classes are required in this design.
+
+---
+
+### Stage 3 – Identify the Critical Design Decisions (2 Marks)
+
+| Class | Data Members | Functions |
+|---|---|---|
+| Vehicle | Registration number, daily rate, rented status | rent(), returnVehicle(), display(), rentalCharge() |
+| Bicycle | Common vehicle data | rentalCharge() |
+| MotorVehicle | Fuel/charge level, service due date | display() |
+| TwoWheeler | Motor vehicle data | rentalCharge() |
+| Car | Seating capacity | rentalCharge() |
+| ElectricCar | Battery capacity, charge per kWh | rentalCharge() |
+| ElectricBus | Battery capacity, charge rate, seating capacity | rentalCharge() |
+
+**Design decisions:**
+
+- Common data and behaviour are placed in the base class Vehicle.
+- `rentalCharge()` is declared as a pure virtual function.
+- `display()` is a virtual function.
+- A virtual destructor is provided in the base class.
+- The fleet is stored using an array of base-class pointers.
+- Runtime polymorphism is used to call the correct rental charge function.
+- New vehicle types can be added by creating new derived classes.
+
+---
+
+### Stage 4 – Design the Classes (4 Marks)
+
+#### Pseudocode – Renting a Vehicle
+
+```text
+PROCEDURE RentVehicle(vehicle)
+
+    IF vehicle is available THEN
+        Set vehicle status to rented
+        Display "Vehicle rented successfully"
+    ELSE
+        Display "Vehicle is already rented"
+    END IF
+
+END PROCEDURE
+```
+
+#### Pseudocode – Returning a Vehicle
+
+```text
+PROCEDURE ReturnVehicle(vehicle, days, lateDays)
+
+    IF vehicle is rented THEN
+
+        charge = vehicle rental charge for days
+
+        lateCharge = lateDays × late fee
+
+        total = charge + lateCharge
+
+        Set vehicle status to available
+
+        Display total charge
+
+    ELSE
+
+        Display "Vehicle is not rented"
+
+    END IF
+
+END PROCEDURE
+```
+
+---
+
+### Stage 5 – Implement and Demonstrate (3 Marks)
+
+#### Complete C++ Program
+
+```cpp
+#include <iostream>
+#include <string>
+using namespace std;
+
+class Vehicle {
+protected:
+    string registration;
+    double dailyRate;
+    bool rented;
+
+public:
+    Vehicle(string reg, double rate)
+        : registration(reg), dailyRate(rate), rented(false) {}
+
+    virtual double rentalCharge(int days) const = 0;
+
+    virtual void display() const {
+        cout << registration
+             << " Rate: " << dailyRate
+             << " Status: "
+             << (rented ? "Rented" : "Available");
+    }
+
+    bool rent() {
+        if (rented)
+            return false;
+
+        rented = true;
+        return true;
+    }
+
+    double returnVehicle(int days, int lateDays) {
+        if (!rented)
+            return 0;
+
+        double total = rentalCharge(days) + lateDays * 500;
+
+        rented = false;
+
+        return total;
+    }
+
+    virtual ~Vehicle() {}
+};
+
+// Bicycle
+class Bicycle : public Vehicle {
+public:
+    Bicycle(string reg, double rate)
+        : Vehicle(reg, rate) {}
+
+    double rentalCharge(int days) const override {
+        return dailyRate * days;
+    }
+};
+
+// Motor Vehicle
+class MotorVehicle : public Vehicle {
+protected:
+    double fuelLevel;
+    string serviceDate;
+
+public:
+    MotorVehicle(string reg, double rate,
+                 double fuel, string date)
+        : Vehicle(reg, rate),
+          fuelLevel(fuel),
+          serviceDate(date) {}
+};
+
+// Two Wheeler
+class TwoWheeler : public MotorVehicle {
+public:
+    TwoWheeler(string reg, double rate,
+               double fuel, string date)
+        : MotorVehicle(reg, rate, fuel, date) {}
+
+    double rentalCharge(int days) const override {
+        return dailyRate * days + 100;
+    }
+};
+
+// Car
+class Car : public MotorVehicle {
+protected:
+    int seats;
+
+public:
+    Car(string reg, double rate, double fuel,
+        string date, int seatCount)
+        : MotorVehicle(reg, rate, fuel, date),
+          seats(seatCount) {}
+
+    double rentalCharge(int days) const override {
+        return dailyRate * days + 200;
+    }
+};
+
+// Electric Car
+class ElectricCar : public Car {
+private:
+    double batteryCapacity;
+    double chargePerKWh;
+
+public:
+    ElectricCar(string reg, double rate,
+                double battery, double chargeRate,
+                string date, int seatCount)
+        : Car(reg, rate, battery, date, seatCount),
+          batteryCapacity(battery),
+          chargePerKWh(chargeRate) {}
+
+    double rentalCharge(int days) const override {
+        return dailyRate * days +
+               batteryCapacity * chargePerKWh;
+    }
+};
+
+// New Vehicle Type: Electric Bus
+class ElectricBus : public Vehicle {
+private:
+    double batteryCapacity;
+    double chargePerKWh;
+    int seats;
+
+public:
+    ElectricBus(string reg, double rate,
+                double battery, double chargeRate,
+                int seatCount)
+        : Vehicle(reg, rate),
+          batteryCapacity(battery),
+          chargePerKWh(chargeRate),
+          seats(seatCount) {}
+
+    double rentalCharge(int days) const override {
+        return dailyRate * days +
+               batteryCapacity * chargePerKWh +
+               seats * 10;
+    }
+};
+
+int main() {
+
+    Bicycle b("B101", 300);
+
+    TwoWheeler t("T201", 500, 10, "2026-12-01");
+
+    Car c("C301", 1500, 40, "2026-12-05", 5);
+
+    ElectricCar e("E401", 2000, 40, 12,
+                  "2026-12-10", 5);
+
+    ElectricBus bus("EB501", 5000, 100, 10, 40);
+
+    Vehicle* fleet[] = {&b, &t, &c, &e, &bus};
+
+    cout << "RENTING VEHICLES" << endl;
+
+    for (Vehicle* v : fleet) {
+        if (v->rent())
+            cout << "Rented successfully" << endl;
+    }
+
+    cout << endl;
+
+    cout << "RETURNING VEHICLES" << endl;
+
+    cout << "Bicycle charge: "
+         << b.returnVehicle(2, 0) << endl;
+
+    cout << "TwoWheeler charge: "
+         << t.returnVehicle(2, 1) << endl;
+
+    cout << "Car charge: "
+         << c.returnVehicle(2, 0) << endl;
+
+    cout << "ElectricCar charge: "
+         << e.returnVehicle(2, 1) << endl;
+
+    cout << "ElectricBus charge: "
+         << bus.returnVehicle(2, 0) << endl;
+
+    cout << endl;
+
+    cout << "FLEET LIST" << endl;
+
+    for (Vehicle* v : fleet) {
+        v->display();
+        cout << endl;
+    }
+
+    return 0;
+}
+```
+
+#### Expected Output
+
+```text
+RENTING VEHICLES
+Rented successfully
+Rented successfully
+Rented successfully
+Rented successfully
+Rented successfully
+
+RETURNING VEHICLES
+Bicycle charge: 600
+TwoWheeler charge: 1600
+Car charge: 3200
+ElectricCar charge: 4980
+ElectricBus charge: 11400
+
+FLEET LIST
+B101 Rate: 300 Status: Available
+T201 Rate: 500 Status: Available
+C301 Rate: 1500 Status: Available
+E401 Rate: 2000 Status: Available
+EB501 Rate: 5000 Status: Available
+```
+
+#### Explanation of the Program
+
+- `Vehicle` is an abstract class because `rentalCharge()` is a pure virtual function.
+- `Bicycle`, `TwoWheeler`, `Car`, and `ElectricCar` implement their own rental charge calculations.
+- `ElectricBus` is added as a new derived class without modifying the existing classes.
+- `Vehicle* fleet[]` stores pointers to different vehicle types.
+- Runtime polymorphism calls the appropriate `rentalCharge()` function.
+- `rent()` changes the status of the vehicle to rented.
+- `returnVehicle()` calculates the rental charge and late fee, then changes the status to available.
+
+---
+
+### Alternative Concept – Single Class with Switch
+
+Instead of using inheritance, all vehicle types can be represented using a single Vehicle class containing a type variable.
+
+```cpp
+enum Type {
+    BICYCLE,
+    TWO_WHEELER,
+    CAR,
+    ELECTRIC_CAR
+};
+```
+
+The `charge()` function can use a switch statement:
+
+```cpp
+double charge(int days) {
+    switch (type) {
+
+        case BICYCLE:
+            return dailyRate * days;
+
+        case TWO_WHEELER:
+            return dailyRate * days + 100;
+
+        case CAR:
+            return dailyRate * days + 200;
+
+        case ELECTRIC_CAR:
+            return dailyRate * days +
+                   battery * chargeRate;
+    }
+
+    return 0;
+}
+```
+
+### Complexity Analysis
+
+| Feature | Inheritance with Virtual Functions | Single Class with Switch |
+|---|---|---|
+| Time per charge calculation | O(1) | O(1) |
+| Space per object | Required data and virtual pointer overhead | May contain unused data members |
+| Adding a new vehicle | Create a new derived class | Modify Vehicle and switch |
+| Maintenance | Easier | More complicated |
+| Extensibility | High | Low |
+
+**Conclusion:**
+
+The inheritance approach is better because it supports runtime polymorphism and makes the program easier to maintain and extend. New vehicle types can be added without modifying the existing classes. This follows the Open/Closed Principle, which states that software should be open for extension but closed for modification.
